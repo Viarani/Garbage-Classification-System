@@ -30,7 +30,7 @@ except Exception as e:
     sys.exit()
 
 # YOLO
-yolo_eye = YOLO('yolov8n.pt') 
+yolo_eye = YOLO(os.path.join('models', 'yolov8n.pt'))
 
 def generate_frames():
     camera = cv2.VideoCapture(0)
