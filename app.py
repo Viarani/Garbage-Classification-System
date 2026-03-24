@@ -1,10 +1,10 @@
-# http://127.0.0.1:5000/
 import os
+import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-import tensorflow as tf #type: ignore
-import numpy as np
 import cv2
+import numpy as np
+import tensorflow as tf #type: ignore
 from flask import Flask, render_template, Response
 from ultralytics import YOLO #type: ignore
 
@@ -15,21 +15,21 @@ labels = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
 base_model = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), include_top=False)
 base_model.trainable = False
 
-model = tf.keras.Sequential([
-    base_model,
-    tf.keras.layers.GlobalAveragePooling2D(),
-    tf.keras.layers.Dense(len(labels), activation='softmax', name='dense_1') 
-])
+inputs = tf.keras.Input(shape=(224, 224, 3))
+x = base_model(inputs, training=False)
+x = tf.keras.layers.GlobalAveragePooling2D()(x)
+x = tf.keras.layers.Dense(256, activation='relu')(x)
+outputs = tf.keras.layers.Dense(len(labels), activation='softmax')(x)
+model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
 try:
-    model.load_weights('model_v1.keras', skip_mismatch=True)
-    print("--- BERHASIL: Model Terpasang Tanpa Skipping! ---")
+    model.load_weights(os.path.join('models', 'model.weights.h5'))
+    print("Arsitektur API + Bobot Berhasil Terpasang!")
 except Exception as e:
-    print(f"Gagal load .keras, nyoba .h5... Info: {e}")
-    model.load_weights('model_v1.h5', skip_mismatch=True, by_name=False)
-    print("--- BERHASIL: Model Terpasang via .h5! ---")
+    print(f"Gagal memuat dikarenakan error: {e}")
+    sys.exit()
 
-# Ambil Mata YOLOv8
+# YOLO
 yolo_eye = YOLO('yolov8n.pt') 
 
 def generate_frames():
@@ -38,31 +38,27 @@ def generate_frames():
         success, frame = camera.read()
         if not success: break
         
-        # A. YOLO Cari Barang (conf diturunin biar lebih peka)
         results = yolo_eye.predict(frame, verbose=False, conf=0.3)
-        
         for result in results:
             for box in result.boxes:
                 cls = int(box.cls[0])
-                if cls == 0: # JANGAN deteksi orang (Person)
-                    continue 
+                if cls == 0: continue 
                 
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 crop_img = frame[y1:y2, x1:x2]
                 
                 if crop_img.size > 0:
-                    # B. PREPROCESSING MobileNetV2
                     img = cv2.resize(crop_img, (224, 224))
-                    img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img)
+                    # Convert BGR ke RGB biar tebakan gak ngaco
+                    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_rgb)
                     img_array = np.expand_dims(img_array, axis=0)
-                    
-                    # C. Prediksi
+
                     prediction = model.predict(img_array, verbose=0)
                     idx = np.argmax(prediction)
                     conf = np.max(prediction) * 100
-                    
-                    # D. Tampilan Boxing + Label
-                    if conf > 25: 
+
+                    if conf > 30: 
                         label_text = f"{labels[idx]} ({conf:.1f}%)"
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                         cv2.putText(frame, label_text, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
