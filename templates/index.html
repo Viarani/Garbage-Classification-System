@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garbage Classifier</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2f;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { color: #4ade80; }
+        .camera-box {
+            margin-top: 20px;
+            border: 5px solid #4ade80;
+            border-radius: 15px;
+            display: inline-block;
+            overflow: hidden;
+            box-shadow: 0px 0px 20px rgba(74, 222, 128, 0.5);
+        }
+        .instruction {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>♻️ Garbage Classification</h1>
+    <p class="instruction">Arahkan sampah ke depan kamera. AI akan menebak secara otomatis!</p>
+
+    <div class="camera-box">
+        <img src="{{ url_for('video_feed') }}" width="640" height="480" alt="Kamera Live">
+    </div>
+
+</body>
+</html>

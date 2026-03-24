@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+coba.ipynb
+coba2.ipynb
+*.txt
+!requirements.txt
